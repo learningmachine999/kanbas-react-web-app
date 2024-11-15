@@ -1,104 +1,86 @@
+import { FaPlus } from "react-icons/fa";
+import { CiSearch } from "react-icons/ci";
+import { BsGripVertical } from "react-icons/bs";
+import LessonControlButtons from "./LessonControlButtons";
+import AssignmentTitleControlButtons from "./AssignmentTitleControlButtons";
+import { MdOutlineArrowDropDown } from "react-icons/md";
+import { GiNotebook } from "react-icons/gi";
 
-import { BsGripVertical} from 'react-icons/bs';
-import { FaCaretDown, FaTrash } from 'react-icons/fa'; //
-import AssignmentControls from './AssignmentsControls';
-import AssignmentControlButtons from './AssignmentControlButtons';
-import { MdOutlineAssignment } from "react-icons/md";
-import { useParams } from "react-router";
-import { Link } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
-import { useState } from 'react';
+import { useParams, useNavigate } from "react-router";
+import { Link } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
 import { deleteAssignment } from "./reducer";
+import ProtectedRoute from "../../Account/ProtectedRoute";
 
 export default function Assignments() {
     const { cid } = useParams();
+    const { assignments } = useSelector((state: any) => state.assignmentsReducer);
     const dispatch = useDispatch();
-    const assignments = useSelector((state: any) =>
-        state.assignmentsReducer.assignments.filter((assignment: { course: string | undefined; }) => assignment.course === cid)
-    );
-    const [assignmentToDelete, setAssignmentToDelete] = useState<string | null>(null);
+    const navigate = useNavigate();
+    const { currentUser } = useSelector((state: any) => state.accountReducer);
 
-    const confirmDelete = (assignmentId: string) => {
-        setAssignmentToDelete(assignmentId);
-    };
-
-    const handleDeleteConfirm = () => {
-        if (assignmentToDelete) {
-        dispatch(deleteAssignment(assignmentToDelete));
-        setAssignmentToDelete(null);
+    const handleDeleteAssignment = (assignmentId: string) => {
+        const confirmDelete = window.confirm("Are you sure you want to delete this assignment?");
+        if (confirmDelete) {
+            dispatch(deleteAssignment(assignmentId));
         }
     };
 
-    const handleDeleteCancel = () => {
-        setAssignmentToDelete(null);
-    };
     return (
-        <div className="container mt-3">
-            < AssignmentControls /><br /><br /><br /><br />
+        <div id="wd-assignments-controls" className="p-3">
+            
+            
+            <div className="search-and-buttons-container mb-4 d-flex justify-content-between">
+                <div className="search-container d-flex align-items-center">
+                    <CiSearch className="search-icon me-2" />
+                    <input type="text" className="search-input form-control" placeholder="Search..."/>
+                </div>
+                <ProtectedRoute><div className="button-group"> 
+                    <button id="wd-add-group-btn" className="btn btn-lg btn-secondary me-1"><FaPlus className="position-relative me-1" style={{ bottom: "1px" }} />Group</button>
+                    <button id="wd-add-assignment-btn" className="btn btn-lg btn-danger me-1" onClick={() => navigate(`/Kanbas/Courses/${cid}/Assignments/new`)}><FaPlus className="position-relative me-1" style={{ bottom: "1px" }} />Assignment</button> 
+                </div></ProtectedRoute>
+            </div>
+            
+            
+            <ul id="wd-assignments" className="list-group rounded-0">
+                <li className="wd-assignment list-group-item p-0 mb-5 fs-5 border-gray">
+                    <div className="wd-assignments-title p-3 ps-2 bg-secondary d-flex justify-content-between align-items-center">
+                        <div className="d-flex align-items-center fw-bold">
+                            <BsGripVertical className="me-2 fs-3" />
+                            <MdOutlineArrowDropDown className="me-2 fs-3" />
+                            ASSIGNMENTS
+                        </div>
+                        <ProtectedRoute><AssignmentTitleControlButtons /></ProtectedRoute>
+                    </div>
 
-          <ul id="wd-modules" className="list-group rounded-0">
-            <li className="wd-module list-group-item p-0 mb-5 fs-5 border-gray">
-              <div className="wd-title p-3 ps-2 bg-secondary"> 
-              <BsGripVertical className="me-2 fs-3" />
-              <FaCaretDown className="ms-1" /> ASSIGNMENTS 
-              <AssignmentControlButtons />
-              </div>
-              <ul className="wd-lessons list-group rounded-0">
-                        {assignments.map((assignment: any) => (
-                            <li key={assignment._id} className="wd-lesson list-group-item p-3 ps-1">
-                                <div className="d-flex">
-                                    <div className="d-flex align-items-center">
-                                        <BsGripVertical className="me-2 fs-4" />
-                                        <MdOutlineAssignment className="fs-4" />
-                                    </div>
-                                    <div className="flex-grow-1 mx-3">
-                                        <div className="fw-bold">
-                                            <Link 
-                                                to={`/Kanbas/Courses/${cid}/Assignments/${assignment._id}`} 
-                                                className="text-dark text-decoration-none">
-                                                {assignment.title}
-                                            </Link>
-                                        </div>
-                                        <div className="text-muted">
-                                            <span className="text-danger">{assignment.modules}</span> | 
-                                            <strong> Not available until</strong> {assignment.availableFrom}
-                                        </div>
-                                        <div className="text-muted">
-                                            <strong>Due </strong>{assignment.dueDate} | {assignment.points} pts
-                                        </div>
-                                    </div>
-                                    <div className="d-flex align-items-center">
-                                        
-                                    </div>
+                    <ul className="wd-assignment-list list-group rounded-0">
+                    {assignments
+                    .filter((assignment: any) => assignment.course === cid)
+                    .map((assignment: any) => (
+                        <li className="wd-assignment-list-item list-group-item p-3 ps-1">
+                            <div className="d-flex align-items-center">
+                                <BsGripVertical className="me-3 fs-3" />
+                                <GiNotebook className="me-3 fs-3" style={{ color: 'green' }} />
+                                <div className="flex-grow-1">
+                                    {currentUser.role === "FACULTY" ? (
+                                        <Link to={`/Kanbas/Courses/${cid}/Assignments/${assignment._id}`}>
+                                            {assignment.title}
+                                        </Link>
+                                    ) : (
+                                        <strong>{assignment.title}</strong>
+                                    )}
+                                    <br /> 
+                                    <span className="red-text">Multiple Modules</span> | <span className="bold-darkgray-text">Not available until</span> {assignment.available} |<br />
+                                    <span className="bold-darkgray-text">Due</span> {assignment.due} | {assignment.points} pts
                                 </div>
-                            </li>
-                        ))}
+                                <ProtectedRoute><LessonControlButtons assignmentId={assignment._id}
+                                deleteAssignment={() => handleDeleteAssignment(assignment._id)}/></ProtectedRoute>
+                            </div>
+                        </li>
+                         ))}
                     </ul>
                 </li>
             </ul>
-            {assignmentToDelete && (
-                <div className="modal fade show" style={{ display: "block" }} tabIndex={-1}>
-                <div className="modal-dialog">
-                    <div className="modal-content">
-                    <div className="modal-header">
-                        <h5 className="modal-title">Delete Assignment</h5>
-                        <button type="button" className="btn-close" onClick={handleDeleteCancel}></button>
-                    </div>
-                    <div className="modal-body">
-                        <p>Are you sure you want to delete this assignment?</p>
-                    </div>
-                    <div className="modal-footer">
-                        <button className="btn btn-secondary" onClick={handleDeleteCancel}>
-                        NO
-                        </button>
-                        <button className="btn btn-danger" onClick={handleDeleteConfirm}>
-                        YES
-                        </button>
-                    </div>
-                    </div>
-                </div>
-                </div>
-            )}
         </div>
     );
 }
