@@ -63,7 +63,7 @@ export default function TOC() {
         </a>
       </li>
       <li className="nav-item">
-        <a id="wd-k" href="https://dashboard.render.com/web/srv-ct0is61u0jms73c5s820/deploys/dep-ct0is69u0jms73c5s880" className="nav-link">
+        <a id="wd-k" href="https://kanbas-node-server-app-obyk.onrender.com" className="nav-link">
           Render
         </a>
       </li>
