@@ -1,86 +1,78 @@
-import { FaPlus } from "react-icons/fa";
-import { CiSearch } from "react-icons/ci";
+import { useParams } from "react-router-dom"; 
+import { useSelector,useDispatch } from "react-redux";
+import AssignmentsControls from "./AssignmentsControls";
+import AssignmentsControlButton from "./AssignmentControlButtons";
 import { BsGripVertical } from "react-icons/bs";
-import LessonControlButtons from "./LessonControlButtons";
-import AssignmentTitleControlButtons from "./AssignmentTitleControlButtons";
-import { MdOutlineArrowDropDown } from "react-icons/md";
-import { GiNotebook } from "react-icons/gi";
-
-import { useParams, useNavigate } from "react-router";
-import { Link } from "react-router-dom";
-import { useSelector, useDispatch } from "react-redux";
-import { deleteAssignment } from "./reducer";
-import ProtectedRoute from "../../Account/ProtectedRoute";
+import { MdArrowDropDown } from "react-icons/md";
+import AssignmentItem from "./AssignmentItem";
+import { useEffect } from "react";
+import * as assignmentsClient from "./client";
+import { setAssignments, deleteAssignment } from "./reducer";
 
 export default function Assignments() {
-    const { cid } = useParams();
-    const { assignments } = useSelector((state: any) => state.assignmentsReducer);
-    const dispatch = useDispatch();
-    const navigate = useNavigate();
-    const { currentUser } = useSelector((state: any) => state.accountReducer);
+  // use the useParams hook to get the course id
+  // const { cid } = useParams();
+  const { cid } = useParams<{ cid: string }>();
+  const dispatch = useDispatch();
 
-    const handleDeleteAssignment = (assignmentId: string) => {
-        const confirmDelete = window.confirm("Are you sure you want to delete this assignment?");
-        if (confirmDelete) {
-            dispatch(deleteAssignment(assignmentId));
-        }
-    };
+  const assignments = useSelector(
+    (state: any) => state.assignmentsReducer.assignments
+  ); // get the assignments from the store
+  const { currentUser } = useSelector((state: any) => state.accountReducer);
+  const role = currentUser ? currentUser.role : null;
+  
 
-    return (
-        <div id="wd-assignments-controls" className="p-3">
-            
-            
-            <div className="search-and-buttons-container mb-4 d-flex justify-content-between">
-                <div className="search-container d-flex align-items-center">
-                    <CiSearch className="search-icon me-2" />
-                    <input type="text" className="search-input form-control" placeholder="Search..."/>
-                </div>
-                <ProtectedRoute><div className="button-group"> 
-                    <button id="wd-add-group-btn" className="btn btn-lg btn-secondary me-1"><FaPlus className="position-relative me-1" style={{ bottom: "1px" }} />Group</button>
-                    <button id="wd-add-assignment-btn" className="btn btn-lg btn-danger me-1" onClick={() => navigate(`/Kanbas/Courses/${cid}/Assignments/new`)}><FaPlus className="position-relative me-1" style={{ bottom: "1px" }} />Assignment</button> 
-                </div></ProtectedRoute>
-            </div>
-            
-            
-            <ul id="wd-assignments" className="list-group rounded-0">
-                <li className="wd-assignment list-group-item p-0 mb-5 fs-5 border-gray">
-                    <div className="wd-assignments-title p-3 ps-2 bg-secondary d-flex justify-content-between align-items-center">
-                        <div className="d-flex align-items-center fw-bold">
-                            <BsGripVertical className="me-2 fs-3" />
-                            <MdOutlineArrowDropDown className="me-2 fs-3" />
-                            ASSIGNMENTS
-                        </div>
-                        <ProtectedRoute><AssignmentTitleControlButtons /></ProtectedRoute>
-                    </div>
+  // get the assignments for the course
+  const fetchAssignments = async () => {
+    const assignments = await assignmentsClient.findAssignmentsForCourse(cid as string);
+    dispatch(setAssignments(assignments));
+  };
 
-                    <ul className="wd-assignment-list list-group rounded-0">
-                    {assignments
-                    .filter((assignment: any) => assignment.course === cid)
-                    .map((assignment: any) => (
-                        <li className="wd-assignment-list-item list-group-item p-3 ps-1">
-                            <div className="d-flex align-items-center">
-                                <BsGripVertical className="me-3 fs-3" />
-                                <GiNotebook className="me-3 fs-3" style={{ color: 'green' }} />
-                                <div className="flex-grow-1">
-                                    {currentUser.role === "FACULTY" ? (
-                                        <Link to={`/Kanbas/Courses/${cid}/Assignments/${assignment._id}`}>
-                                            {assignment.title}
-                                        </Link>
-                                    ) : (
-                                        <strong>{assignment.title}</strong>
-                                    )}
-                                    <br /> 
-                                    <span className="red-text">Multiple Modules</span> | <span className="bold-darkgray-text">Not available until</span> {assignment.available} |<br />
-                                    <span className="bold-darkgray-text">Due</span> {assignment.due} | {assignment.points} pts
-                                </div>
-                                <ProtectedRoute><LessonControlButtons assignmentId={assignment._id}
-                                deleteAssignment={() => handleDeleteAssignment(assignment._id)}/></ProtectedRoute>
-                            </div>
-                        </li>
-                         ))}
-                    </ul>
-                </li>
-            </ul>
-        </div>
-    );
+  useEffect(() => {
+    fetchAssignments();
+  }, [cid]);
+
+  //delete assignment
+  const removeAssignment = async (assignmentId: string) => {
+    console.log("Deleting assignment with ID:", assignmentId); //debugging!!
+    await assignmentsClient.deleteAssignment(assignmentId);
+    dispatch(deleteAssignment(assignmentId));
+  };
+
+  return (
+    <div className="container">
+      {/* Assignments Controls bar */}
+      <AssignmentsControls /><br />
+
+      <ul id="wd-modules" className="list-group rounded-0">
+        <li className="wd-module list-group-item p-0 mb-5 fs-5 border-gray">
+          <div className="wd-title p-3 ps-2 bg-secondary">
+            <BsGripVertical className="me-2 fs-3" />
+            <MdArrowDropDown className="me-2 fs-3" />
+            ASSIGNMENTS
+            {(role === "FACULTY"|| role === "ADMIN") && <AssignmentsControlButton />}
+          </div>
+
+          <ul id="wd-assignments-list" className="list-group rounded-0">
+            {/* dynamically render the assignments */}
+            {assignments.map((assignment: any) => (
+              <AssignmentItem
+                key={assignment._id}
+                id={assignment._id} 
+                title={assignment.title}
+                modules="Multiple Modules"
+                availability="To be defined"  
+                dueDate="To be defined"        
+                points={assignment.points || "100"}     
+                link={`#/Kanbas/Courses/${cid}/Assignments/${assignment._id}`}
+                // link={`/Kanbas/Courses/${cid}/Assignments/Editor`}
+                deleteAssignment={removeAssignment}
+              />
+            ))}
+          </ul>
+        </li>
+      </ul>
+
+    </div>
+  );
 }
